@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVR
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -42,9 +42,31 @@ scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
+#   ---gridsearchcv for optimal hyperparameters---
+test_model = SVR()
+
+params = {"C":[0.1, 1, 10, 100], "gamma":[1, 0.1, 0.01, 0.001], "kernel":['rbf', 'linear']}
+
+grid = GridSearchCV(estimator=test_model, param_grid=params, cv=5, verbose=2, n_jobs=-1)
+grid.fit(X_train, y_train)
+
+print("Optimal Hyperparameters: ", grid.best_params_)
+print("Best Score: ", grid.best_score_)
+
+
 #   ---model initiation and traning---
-model = SVR(kernel="rbf", C=500, epsilon=0.05, gamma=0.01)
+model = grid.best_estimator_
 model.fit(X_train, y_train)
+
+#   ---detecting overfitting/underfitting with cross validation---
+train_score = model.score(X_train, y_train)
+print(f"train score: {train_score}")
+
+test_score = model.score(X_test, y_test)
+print(f"test score: {test_score}")
+
+cv_score = cross_val_score(model, X_train, y_train, cv=5)
+print(f"cross validation score: {cv_score.mean()}")
 
 #   ---prediction---
 y_pred = model.predict(X_test)
