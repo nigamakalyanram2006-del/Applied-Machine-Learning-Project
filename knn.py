@@ -1,11 +1,10 @@
 #   ---Predicting student's G2 (midway) and G3 (final/at the very end of the year) scores using KNN ML Model---
-#   ---Hyperparameter tuning was used to analyze how different values of k affect overfitting and predictive accuracy---
 
 #   ---importing libraries---
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -91,12 +90,32 @@ X_g3_train = scaler_g3.fit_transform(X_g3_train)
 X_g3_test = scaler_g3.transform(X_g3_test)
 
 #   ---model initiation and training---
-for k in range(1, 41):
-    model = KNeighborsRegressor(n_neighbors=k)
-    scores = cross_val_score(model, X_g2_train, y_g2_train, cv=5)
-    print(k, scores.mean())
+test_model_2 = KNeighborsRegressor()
+params = [
+    {
+        "n_neighbors": [3, 5, 7, 9, 11, 15, 21],
+        "weights": ["uniform", "distance"],
+        "metric": ["euclidean"]
+    },
+    {
+        "n_neighbors": [3, 5, 7, 9, 11, 15, 21],
+        "weights": ["uniform", "distance"],
+        "metric": ["manhattan"]
+    },
+    {
+        "n_neighbors": [3, 5, 7, 9, 11, 15, 21],
+        "weights": ["uniform", "distance"],
+        "metric": ["minkowski"],
+        "p": [1, 2]
+    }
+]
+grid_2 = GridSearchCV(estimator=test_model_2, param_grid=params, cv=5, n_jobs = -1)
+grid_2.fit(X_g2_train, y_g2_train)
 
-model_g2 = KNeighborsRegressor(n_neighbors = 17, metric='manhattan')
+print("Optimal Hyperparameters: ", grid_2.best_params_)
+print("Best Score: ", grid_2.best_score_)
+
+model_g2 = grid_2.best_estimator_
 model_g2.fit(X_g2_train, y_g2_train)
 
 train_score_g2 = model_g2.score(X_g2_train, y_g2_train)
@@ -108,12 +127,19 @@ print(f"test score g2: {test_score_g2}")
 cv_score_g2 = cross_val_score(model_g2, X_g2_train, y_g2_train, cv=5)
 print(f"cross validation score g2: {cv_score_g2.mean()}")
 
-for k in range(1, 41):
-    model = KNeighborsRegressor(n_neighbors=k)
-    scores = cross_val_score(model, X_g3_train, y_g3_train, cv=5)
-    print(k, scores.mean())
+test_model_3 = KNeighborsRegressor()
+grid_3 = GridSearchCV(
+    estimator=test_model_3,
+    param_grid=params,
+    cv=5,
+    n_jobs=-1
+)
+grid_3.fit(X_g3_train, y_g3_train)
 
-model_g3 = KNeighborsRegressor(n_neighbors = 14, weights='distance')
+print("Optimal Hyperparameters: ", grid_3.best_params_)
+print("Best Score: ", grid_3.best_score_)
+
+model_g3 = grid_3.best_estimator_
 model_g3.fit(X_g3_train, y_g3_train)
 
 train_score_g3 = model_g3.score(X_g3_train, y_g3_train)
