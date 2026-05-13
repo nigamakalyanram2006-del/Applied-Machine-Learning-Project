@@ -4,7 +4,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, roc_auc_score, roc_curve
@@ -42,6 +42,16 @@ X_test = scaler.transform(X_test)
 #   ---model initiation and training---
 model  = SVC(kernel = "linear", C = 1.0, probability=True)
 model.fit(X_train, y_train)
+
+#   ---detecting overfitting/underfitting with cross validation---
+train_score = model.score(X_train, y_train)
+print(f"train score: {train_score}")
+
+test_score = model.score(X_test, y_test)
+print(f"test score: {test_score}")
+
+cv_score = cross_val_score(model, X_train, y_train, cv=5)
+print(f"cross validation score: {cv_score.mean()}")
 
 #   ---prediction---
 y_pred = model.predict(X_test)
