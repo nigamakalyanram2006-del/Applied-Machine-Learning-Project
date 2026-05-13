@@ -1,11 +1,10 @@
 #   ---Predicting LLM Rank using XGBoost Regressor and predicting LLM model type, using Classifer ML Model---
-#   ---The classification results show how a small and imbalanced dataset can make a model look more accurate than it really is, while still failing to properly learn or evaluate all the classes---
 
 #   ---importing libraries---
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, jaccard_score, classification_report, confusion_matrix
 from xgboost import XGBRegressor, XGBClassifier
@@ -53,7 +52,15 @@ X_reg_train, X_reg_test, y_reg_train, y_reg_test = train_test_split(X_reg, y_reg
 X_class_train, X_class_test, y_class_train, y_class_test = train_test_split(X_class, y_class, test_size = 0.2, random_state = 101, stratify=y_class)
 
 #   ---model initiation and training---
-xgbreg = XGBRegressor(n_estimators = 300, learning_rate = 0.05, max_depth = 4, random_state = 101)
+model_reg = XGBRegressor(random_state = 101)
+params = {"n_estimators":[100, 200, 300, 400, 500], "learning_rate":[0.01, 0.05, 0.1], "max_depth":[3, 5, 7], "subsample": [0.7, 0.8, 1.0], "colsample_bytree": [0.7, 0.8, 1.0], "min_child_weight": [1, 3, 5]}
+grid = GridSearchCV(estimator = model_reg, param_grid = params, cv = 5, n_jobs = -1)
+grid.fit(X_reg_train, y_reg_train)
+
+print("Optimal Hyperparameters: ",grid.best_params_)
+print("Best Score: ", grid.best_score_)
+
+xgbreg = grid.best_estimator_
 xgbreg.fit(X_reg_train, y_reg_train)
 
 #   ---detecting overfitting/underfitting with cross validation---
@@ -66,7 +73,19 @@ print(f"test score reg: {test_score_reg}")
 cv_score_reg = cross_val_score(xgbreg, X_reg_train, y_reg_train, cv=5)
 print(f"cross validation score reg: {cv_score_reg.mean()}")
 
-xgbclass = XGBClassifier(n_estimators = 20, learning_rate = 0.3, max_depth = 1, min_child_weight = 0, random_state = 101)
+model_class = XGBClassifier(random_state = 101)
+params = {
+    "n_estimators": [50, 100],
+    "max_depth": [2, 3],
+    "learning_rate": [0.05, 0.1]
+}
+grid = GridSearchCV(estimator=model_class, param_grid=params, cv = 5, n_jobs = -1)
+grid.fit(X_class_train, y_class_train)
+
+print("Optimal Hyperparameters:", grid.best_params_)
+print("Best Score:", grid.best_score_)
+
+xgbclass = grid.best_estimator_
 xgbclass.fit(X_class_train, y_class_train)
 
 train_score_class = xgbclass.score(X_class_train, y_class_train)
