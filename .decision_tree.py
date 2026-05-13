@@ -4,7 +4,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error, mean_absolute_error, r2_score
@@ -48,13 +48,22 @@ X_cut_train, X_cut_test, y_cut_train, y_cut_test = train_test_split(X_cut, y_cut
 X_price_train, X_price_test, y_price_train, y_price_test = train_test_split(X_price, y_price, test_size = 0.2, random_state = 101)
 
 #   ---using cross validation to hypertune parameters---
-for depth in range(1,21 ):
-    model = DecisionTreeClassifier(max_depth = depth, random_state = 101)
-    scores = cross_val_score(model, X_cut_train, y_cut_train, cv = 5)
-    print(f"max depth: {depth}, cv score: {scores.mean()}")
+test_cut = DecisionTreeClassifier()
+params_cut = {
+    "max_depth": [3, 5, 7, 10],
+    "min_samples_split": [2, 5, 10, 20],
+    "min_samples_leaf": [1, 2, 5, 10],
+    "max_features": [None, "sqrt", "log2"],
+    "criterion": ["gini", "entropy", "log_loss"]
+}
+grid_cut = GridSearchCV(estimator=test_cut, param_grid=params_cut, cv = 5, n_jobs = -1)
+grid_cut.fit(X_cut_train, y_cut_train)
+
+print("Optimal Hyperparameters: ", grid_cut.best_params_)
+print("Best Score: ", grid_cut.best_score_)
 
 #   ---model initiation---
-model_class = DecisionTreeClassifier(max_depth = 12, random_state = 101)
+model_class = grid_cut.best_estimator_
 model_class.fit(X_cut_train, y_cut_train)
 
 #   ---detecting overfitting/underfitting with cross validation---
@@ -67,7 +76,21 @@ print(f"test score class: {test_score_class}")
 cv_score_class = cross_val_score(model_class, X_cut_train, y_cut_train, cv=5)
 print(f"cross validation score class: {cv_score_class.mean()}")
 
-model_reg = DecisionTreeRegressor()
+test_price = DecisionTreeRegressor()
+params_price = {
+    "max_depth": [3, 5, 7, 10, None],
+    "min_samples_split": [2, 5, 10, 20],
+    "min_samples_leaf": [1, 2, 5, 10],
+    "max_features": [None, "sqrt", "log2"],
+    "criterion": ["squared_error", "friedman_mse"]
+}
+grid_price = GridSearchCV(estimator=test_price, param_grid=params_price, cv = 5, n_jobs = -1)
+grid_price.fit(X_price_train, y_price_train)
+
+print("Optimal Hyperparameters: ", grid_price.best_params_)
+print("Best Score: ", grid_price.best_score_)
+
+model_reg = grid_price.best_estimator_
 model_reg.fit(X_price_train, y_price_train)
 
 train_score_reg = model_reg.score(X_price_train, y_price_train)
@@ -78,7 +101,6 @@ print(f"test score reg: {test_score_reg}")
 
 cv_score_reg = cross_val_score(model_reg, X_price_train, y_price_train, cv=5)
 print(f"cross validation score reg: {cv_score_reg.mean()}")
-
 
 #   ---prediction---
 y_cut_pred = model_class.predict(X_cut_test)
@@ -97,12 +119,10 @@ print(f'mse: {mse}, mae: {mae}, r2 score: {r2}')
 
 #   ---new unseen user data---
 carat = float(input("\nHow heavy is the diamond in carats? (e.g. 0.5, 1.2) \n>>>"))
-cut = int(input("\nWhat is your Diamond's cut? \n>>>"))
 color = int(input("\nWhat is the color grade? \n >Enter 0 for E \n >Enter 1 for I \n >Enter 2 for J \n >Enter 3 for H \n >Enter 4 for F \n >Enter 5 for G \n >Enter 6 for D \n>>> "))
 clarity = int(input("\nHow clear is the diamond? \n >Enter 0 for I1 \n >Enter 1 for SI2 \n >Enter 2 for SI1 \n >Enter 3 for VS2 \n >Enter 4 for VS1 \n >Enter 5 for VVS2 \n >Enter 6 for VVS1 \n >Enter 7 for IF \n>>> "))
 depth = float(input("\nWhat is the total depth percentage? (Usually between 43-79) \n>>> "))
 table = float(input("\nWhat is the table width percentage? (Usually between 43-95) \n>>> "))
-price = int(input("\nEnter the s the current market price of the Diamond? \n>>>"))
 x = float(input("\nEnter the Length (x): \n>>> "))
 y = float(input("\nEnter the Width (y): \n>>> "))
 z = float(input("\nEnter the Depth (z): \n>>> "))
